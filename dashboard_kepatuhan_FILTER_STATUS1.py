@@ -32,13 +32,17 @@ def hitung_kepatuhan(df, tahun_pajak):
     rata_rata_pembayaran = total_pembayaran / bulan_pembayaran.replace(0, 1)
     kepatuhan_persen = bulan_pembayaran / bulan_aktif.replace(0, 1) * 100
 
-    def klasifikasi(kepatuhan):
-        if kepatuhan <= 33.333:
-            return "Kurang Patuh"
-        elif kepatuhan <= 66.666:
-            return "Cukup Patuh"
-        else:
-            return "Patuh"
+
+    def klasifikasi(bulan_aktif, bulan_pembayaran):
+    if bulan_aktif == 0 and bulan_pembayaran == 0:
+        return "Belum Aktif"
+    elif bulan_pembayaran == bulan_aktif:
+        return "Patuh"
+    elif bulan_aktif - bulan_pembayaran <= 3:
+        return "Kurang Patuh"
+    else:
+        return "Tidak Patuh"
+
 
     klasifikasi_kepatuhan = kepatuhan_persen.apply(klasifikasi)
 
