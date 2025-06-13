@@ -1,100 +1,97 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-from io import BytesIO
-import plotly.express as px
+import numpy as np
 
-st.set_page_config(page_title="🎨 Dashboard Kepatuhan Pajak Daerah", layout="wide")
-st.title("🎯 Dashboard Kepatuhan Pajak Daerah")
-st.markdown("Upload file Excel, pilih sheet, filter, dan lihat visualisasinya ✨")
+st.set_page_config(page_title="Dashboard Kepatuhan Pajak", layout="wide")
 
-uploaded_file = st.file_uploader("📁 Upload File Excel", type=["xlsx"])
-tahun_pajak = st.number_input("📅 Pilih Tahun Pajak", min_value=2000, max_value=2100, value=2024)
+st.title("📊 Dashboard Kepatuhan Pajak")
 
-def hitung_kepatuhan(df, tahun_pajak):
-    df['TMT'] = pd.to_datetime(df['TMT'], errors='coerce')
-    payment_cols = [col for col in df.columns if isinstance(col, datetime) and col.year == tahun_pajak]
+st.markdown("Silakan upload file Excel berisi data setoran masa pajak.")
 
-    total_pembayaran = df[payment_cols].sum(axis=1)
-
-    def hitung_bulan_aktif(tmt):
-        if pd.isna(tmt): return 0
-        if tmt.year < tahun_pajak:
-            return 12
-        elif tmt.year > tahun_pajak:
-            return 0
-        else:
-            return 12 - tmt.month + 1
-
-    bulan_aktif = df['TMT'].apply(hitung_bulan_aktif)
-    bulan_pembayaran = df[payment_cols].gt(0).sum(axis=1)
-    rata_rata_pembayaran = total_pembayaran / bulan_pembayaran.replace(0, 1)
-    kepatuhan_persen = bulan_pembayaran / bulan_aktif.replace(0, 1) * 100
-
-    def klasifikasi(row):
-        if row['bulan_aktif'] == 0 and row['bulan_pembayaran'] == 0:
-            return "Belum Aktif"
-        elif row['bulan_pembayaran'] == row['bulan_aktif']:
-            return "Patuh"
-        elif row['bulan_aktif'] - row['bulan_pembayaran'] <= 3:
-            return "Kurang Patuh"
-        else:
-            return "Tidak Patuh"
-
-    df["Total Pembayaran"] = total_pembayaran
-    df["bulan_aktif"] = bulan_aktif
-    df["bulan_pembayaran"] = bulan_pembayaran
-    df["Rata-rata Pembayaran"] = rata_rata_pembayaran
-    df["Kepatuhan (%)"] = kepatuhan_persen
-    df["Klasifikasi Kepatuhan"] = df.apply(klasifikasi, axis=1)
-
-    return df, payment_cols
+uploaded_file = st.file_uploader("Upload file Excel", type=["xlsx"])
 
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
-    sheet_names = xls.sheet_names
-    selected_sheet = st.selectbox("📄 Pilih Nama Sheet", sheet_names)
-    df_input = pd.read_excel(xls, sheet_name=selected_sheet)
+    sheet_options = xls.sheet_names
+    selected_sheet = st.selectbox("Pilih Sheet", sheet_options)
 
-    # ✅ Normalisasi nama kolom
-    df_input.columns = df_input.columns.str.strip().str.lower().str.replace(" ", "").str.replace(".", "")
+    if selected_sheet:
+        df_input = pd.read_excel(xls, sheet_name=selected_sheet)
 
-    alias_map = {
-        'tmt': 'TMT',
-        'tm': 'TMT',
-        'namaop': 'Nama Op',
-        'nmunit': 'Nm Unit',
-        'klasifikasi': 'KLASIFIKASI',
-        'status': 'Status'  # jika kolom Status kadang lowercase
-    }
+        # ✅ Hapus kolom duplikat
+        df_input = df_input.loc[:, ~df_input.columns.duplicated()]
 
-    df_input.rename(columns={old: alias_map[old] for old in df_input.columns if old in alias_map}, inplace=True)
+        # ✅ Normalisasi nama kolom
+        df_input.columns = df_input.columns.str.strip().str.lower().str.replace(" ", "").str.replace(".", "")
 
-    required_cols = ["TMT", "Nama Op", "Nm Unit", "KLASIFIKASI"]
-    missing_cols = [col for col in required_cols if col not in df_input.columns]
+        # ✅ Nama alias kolom penting
+        alias_nama_op = ['namaop', 'namawp']
+        alias_unit = ['upppd', 'unit', 'nmunit']
+        alias_kategori = ['kategori', 'klasifikasi', 'jenishiburan']
+        alias_status = ['status']
+        alias_tmt = ['tmt', 'tm']
+        alias_bulan = ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'agu', 'sep', 'okt', 'nov', 'des']
 
-    if missing_cols:
-        st.error(f"❌ Kolom wajib hilang: {', '.join(missing_cols)}. Harap periksa file Anda.")
-    else:
-        df_output, payment_cols = hitung_kepatuhan(df_input.copy(), tahun_pajak)
+        def cari_kolom(possibles):
+            for col in possibles:
+                if col in df_input.columns:
+                    return col
+            return None
 
-        with st.sidebar:
-            st.header("🔍 Filter Data")
-            selected_unit = st.selectbox("🏢 Pilih UPPPD", ["Semua"] + sorted(df_output["Nm Unit"].dropna().unique().tolist()))
-            if selected_unit != "Semua":
-                df_output = df_output[df_output["Nm Unit"] == selected_unit]
+        # ✅ Mapping kolom
+        kol_nama_op = cari_kolom(alias_nama_op)
+        kol_unit = cari_kolom(alias_unit)
+        kol_kategori = cari_kolom(alias_kategori)
+        kol_status = cari_kolom(alias_status)
+        kol_tmt = cari_kolom(alias_tmt)
 
-            selected_klasifikasi = st.selectbox("📂 Pilih Klasifikasi Pajak", ["Semua"] + sorted(df_output["KLASIFIKASI"].dropna().unique().tolist()))
-            if selected_klasifikasi != "Semua":
-                df_output = df_output[df_output["KLASIFIKASI"] == selected_klasifikasi]
+        df = df_input.copy()
 
-            if "Status" in df_output.columns:
-                selected_status = st.multiselect("📌 Pilih Status OP", options=sorted(df_output["Status"].dropna().unique().tolist()), default=None)
-                if selected_status:
-                    df_output = df_output[df_output["Status"].isin(selected_status)]
+        # ✅ Rename kolom
+        df = df.rename(columns={
+            kol_nama_op: 'Nama OP',
+            kol_unit: 'UPPPD',
+            kol_status: 'STATUS',
+            kol_tmt: 'TMT'
+        })
+        if kol_kategori:
+            df = df.rename(columns={kol_kategori: 'KATEGORI'})
 
+        # ✅ Format TMT
+        df['TMT'] = pd.to_datetime(df['TMT'], errors='coerce')
+
+        # ✅ Pilih tahun pajak
+        tahun_pilihan = st.selectbox("Pilih Tahun Pajak", sorted(df['TMT'].dt.year.dropna().unique(), reverse=True))
+        df = df[df['TMT'].dt.year <= tahun_pilihan]
+
+        # ✅ Hitung bulan aktif
+        df['Bulan Aktif'] = df['TMT'].apply(lambda x: 12 - x.month + 1 if pd.notnull(x) else 0)
+
+        # ✅ Ambil kolom bulan
+        kolom_bulan = [b for b in alias_bulan if b in df.columns]
+        df['Bulan Bayar'] = df[kolom_bulan].apply(lambda row: row.notna().sum(), axis=1)
+        df['Total Pembayaran'] = df[kolom_bulan].sum(axis=1)
+
+        # ✅ Kepatuhan
+        df['Kepatuhan (%)'] = (df['Bulan Bayar'] / df['Bulan Aktif'].replace(0, np.nan)) * 100
+        df['Kepatuhan (%)'] = df['Kepatuhan (%)'].fillna(0).round(2)
+
+        def klasifikasi(row):
+            selisih = row['Bulan Aktif'] - row['Bulan Bayar']
+            if selisih > 3:
+                return "TIDAK PATUH"
+            elif selisih > 0:
+                return "KURANG PATUH"
+            return "PATUH"
+
+        df['KLASIFIKASI'] = df.apply(klasifikasi, axis=1)
+
+        # ✅ Format uang
+        df['Total Pembayaran'] = df['Total Pembayaran'].apply(lambda x: f"{x:,.2f}")
+
+        # ✅ Tampilkan data
         st.success("✅ Data berhasil diproses dan difilter!")
-        st.dataframe(df_output.head(30), use_container_width=True)
+        st.dataframe(df[['Nama OP', 'UPPPD', 'STATUS', 'TMT', 'Bulan Aktif', 'Bulan Bayar', 'Total Pembayaran', 'Kepatuhan (%)', 'KLASIFIKASI']].head(50), use_container_width=True)
 
         output = BytesIO()
         df_output.to_excel(output, index=False)
@@ -130,14 +127,17 @@ if uploaded_file:
             )
             st.plotly_chart(fig_line, use_container_width=True)
 
-        st.subheader("🏅 Top 5 Objek Pajak Berdasarkan Total Pembayaran (Tabel Lengkap)")
+            st.subheader("🏅 Top 5 Objek Pajak Berdasarkan Total Pembayaran (Tabel Lengkap)")
+            
+            # Ambil kolom yang dibutuhkan
+            top_wp_detail = (
+                df_output[["Nama Op", "Total Pembayaran", "Nm Unit", "KLASIFIKASI"]]
+                .groupby(["Nama Op", "Nm Unit", "KLASIFIKASI"], as_index=False)
+                .sum()
+                .sort_values("Total Pembayaran", ascending=False)
+                .head(5)
+            )
+            
+            # Tampilkan sebagai tabel
+            st.dataframe(top_wp_detail.style.format({"Total Pembayaran": "Rp{:,.0f}"}), use_container_width=True)
 
-        top_wp_detail = (
-            df_output[["Nama Op", "Total Pembayaran", "Nm Unit", "Klasifikasi Kepatuhan"]]
-            .groupby(["Nama Op", "Klasifikasi Kepatuhan", "Nm Unit"], as_index=False)
-            .sum()
-            .sort_values("Total Pembayaran", ascending=False)
-            .head(5)
-        )
-
-        st.dataframe(top_wp_detail.style.format({"Total Pembayaran": "Rp{:,.0f}"}), use_container_width=True)
