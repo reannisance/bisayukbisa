@@ -6,7 +6,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="🎨 Dashboard Kepatuhan Pajak Daerah", layout="wide")
 st.title("🎯 Dashboard Kepatuhan Pajak Daerah")
-st.markdown("Upload file Excel, pilih sheet, filter, dan lihat visualisasi yang menarik ✨")
+st.markdown("Upload file Excel, pilih sheet, filter, dan lihat visualisasinya ✨")
 
 uploaded_file = st.file_uploader("📁 Upload File Excel", type=["xlsx"])
 tahun_pajak = st.number_input("📅 Pilih Tahun Pajak", min_value=2000, max_value=2100, value=2024)
@@ -87,7 +87,7 @@ if uploaded_file:
         df_output.to_excel(output, index=False)
         st.download_button("⬇️ Download Hasil Excel", data=output.getvalue(), file_name="hasil_dashboard.xlsx")
 
-        st.subheader("🧁 Pie Chart Kepatuhan WP (Warna Lucu)")
+        st.subheader("Pie Chart Kepatuhan WP")
         pie_data = df_output["Klasifikasi Kepatuhan"].value_counts().reset_index()
         pie_data.columns = ["Klasifikasi", "Jumlah"]
         fig_pie = px.pie(
