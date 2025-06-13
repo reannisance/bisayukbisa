@@ -35,15 +35,14 @@ def hitung_kepatuhan(df, tahun_pajak):
     def klasifikasi(row):
         bulan_aktif = row['bulan_aktif']
         bulan_pembayaran = row['bulan_pembayaran']
-
-            if bulan_aktif == 0 and bulan_pembayaran == 0:
-                return "Belum Aktif"
-            elif bulan_pembayaran == bulan_aktif:
-                return "Patuh"
-            elif bulan_aktif - bulan_pembayaran <= 3:
-                return "Kurang Patuh"
-            else:
-                return "Tidak Patuh"
+                if bulan_aktif == 0 and bulan_pembayaran == 0:
+                    return "Belum Aktif"
+                elif bulan_pembayaran == bulan_aktif:
+                    return "Patuh"
+                elif bulan_aktif - bulan_pembayaran <= 3:
+                    return "Kurang Patuh"
+                else:
+                    return "Tidak Patuh"
 
 # Terapkan ke DataFrame
     df['klasifikasi_kepatuhan'] = df.apply(klasifikasi, axis=1)
