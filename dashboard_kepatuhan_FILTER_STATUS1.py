@@ -57,4 +57,87 @@ if uploaded_file:
     df_input = pd.read_excel(xls, sheet_name=selected_sheet)
 
     # ✅ Normalisasi nama kolom
-    df_input.columns = df_input.columns.str.s
+    df_input.columns = df_input.columns.str.strip().str.lower().str.replace(" ", "").str.replace(".", "")
+
+    alias_map = {
+        'tmt': 'TMT',
+        'tm': 'TMT',
+        'namaop': 'Nama Op',
+        'nmunit': 'Nm Unit',
+        'klasifikasi': 'KLASIFIKASI',
+        'status': 'Status'  # jika kolom Status kadang lowercase
+    }
+
+    df_input.rename(columns={old: alias_map[old] for old in df_input.columns if old in alias_map}, inplace=True)
+
+    required_cols = ["TMT", "Nama Op", "Nm Unit", "KLASIFIKASI"]
+    missing_cols = [col for col in required_cols if col not in df_input.columns]
+
+    if missing_cols:
+        st.error(f"❌ Kolom wajib hilang: {', '.join(missing_cols)}. Harap periksa file Anda.")
+    else:
+        df_output, payment_cols = hitung_kepatuhan(df_input.copy(), tahun_pajak)
+
+        with st.sidebar:
+            st.header("🔍 Filter Data")
+            selected_unit = st.selectbox("🏢 Pilih UPPPD", ["Semua"] + sorted(df_output["Nm Unit"].dropna().unique().tolist()))
+            if selected_unit != "Semua":
+                df_output = df_output[df_output["Nm Unit"] == selected_unit]
+
+            selected_klasifikasi = st.selectbox("📂 Pilih Klasifikasi Pajak", ["Semua"] + sorted(df_output["KLASIFIKASI"].dropna().unique().tolist()))
+            if selected_klasifikasi != "Semua":
+                df_output = df_output[df_output["KLASIFIKASI"] == selected_klasifikasi]
+
+            if "Status" in df_output.columns:
+                selected_status = st.multiselect("📌 Pilih Status OP", options=sorted(df_output["Status"].dropna().unique().tolist()), default=None)
+                if selected_status:
+                    df_output = df_output[df_output["Status"].isin(selected_status)]
+
+        st.success("✅ Data berhasil diproses dan difilter!")
+        st.dataframe(df_output.head(30), use_container_width=True)
+
+        output = BytesIO()
+        df_output.to_excel(output, index=False)
+        st.download_button("⬇️ Download Hasil Excel", data=output.getvalue(), file_name="hasil_dashboard.xlsx")
+
+        st.subheader("Pie Chart Kepatuhan WP")
+        pie_data = df_output["Klasifikasi Kepatuhan"].value_counts().reset_index()
+        pie_data.columns = ["Klasifikasi", "Jumlah"]
+        fig_pie = px.pie(
+            pie_data,
+            names="Klasifikasi",
+            values="Jumlah",
+            title="Distribusi Kepatuhan WP",
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+        st.subheader("📈 Tren Pembayaran Pajak per Bulan")
+        if payment_cols:
+            bulanan = df_output[payment_cols].sum().reset_index()
+            bulanan.columns = ["Bulan", "Total Pembayaran"]
+            bulanan["Bulan"] = pd.to_datetime(bulanan["Bulan"])
+            bulanan = bulanan.sort_values("Bulan")
+
+            fig_line = px.line(
+                bulanan,
+                x="Bulan",
+                y="Total Pembayaran",
+                title="Total Pembayaran Pajak per Bulan",
+                markers=True,
+                line_shape="spline",
+                color_discrete_sequence=["#FFB6C1"]
+            )
+            st.plotly_chart(fig_line, use_container_width=True)
+
+        st.subheader("🏅 Top 5 Objek Pajak Berdasarkan Total Pembayaran (Tabel Lengkap)")
+
+        top_wp_detail = (
+            df_output[["Nama Op", "Total Pembayaran", "Nm Unit", "Klasifikasi Kepatuhan"]]
+            .groupby(["Nama Op", "Klasifikasi Kepatuhan", "Nm Unit"], as_index=False)
+            .sum()
+            .sort_values("Total Pembayaran", ascending=False)
+            .head(5)
+        )
+
+        st.dataframe(top_wp_detail.style.format({"Total Pembayaran": "Rp{:,.0f}"}), use_container_width=True)
