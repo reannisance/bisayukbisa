@@ -22,6 +22,8 @@ def normalisasi_kolom(df):
         'nm unit': 'Nm Unit',
         'unit': 'Nm Unit',
         'kategori': 'KLASIFIKASI',
+        'Klasifikasi' : 'KLASIFIKASI',
+        'klasifikasi' : 'KLASIFIKASI',
         'klasifikasi hiburan': 'KLASIFIKASI',
         'jenis': 'KLASIFIKASI',
     }
