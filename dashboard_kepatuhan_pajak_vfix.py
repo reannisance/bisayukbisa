@@ -16,6 +16,7 @@ def normalisasi_kolom(df):
     kolom_alias = {
         'tmt': 'TMT',
         't.m.t': 'TMT',
+        'TMT' : 'TMT',
         'tgl mulai': 'TMT',
         'nama wp': 'Nama Op',
         'nama op': 'Nama Op',
@@ -25,6 +26,9 @@ def normalisasi_kolom(df):
         'Klasifikasi' : 'KLASIFIKASI',
         'klasifikasi' : 'KLASIFIKASI',
         'klasifikasi hiburan': 'KLASIFIKASI',
+        'STATUS' : 'STATUS',
+        'Status' : 'STATUS',
+        'status' : 'STATUS',
         'jenis': 'KLASIFIKASI',
     }
     df.columns = [str(col).strip().lower().replace('.', '').replace('_', ' ') for col in df.columns]
@@ -77,7 +81,7 @@ if uploaded_file:
     df_input = pd.read_excel(xls, sheet_name=selected_sheet)
     df_input = normalisasi_kolom(df_input)
 
-    required_cols = ["TMT", "Nama Op", "Nm Unit", "KLASIFIKASI"]
+    required_cols = ["TMT", "STATUS", "Nm Unit"]
     missing_cols = [col for col in required_cols if col not in df_input.columns]
 
     if missing_cols:
