@@ -48,12 +48,12 @@ def klasifikasi(row):
 # Terapkan ke DataFrame
 df['klasifikasi_kepatuhan'] = df.apply(klasifikasi, axis=1)
 
-    df["Total Pembayaran"] = total_pembayaran
-    df["Bulan Aktif"] = bulan_aktif
-    df["Bulan Pembayaran"] = bulan_pembayaran
-    df["Rata-rata Pembayaran"] = rata_rata_pembayaran
-    df["Kepatuhan (%)"] = kepatuhan_persen
-    df["Klasifikasi Kepatuhan"] = klasifikasi_kepatuhan
+df["Total Pembayaran"] = total_pembayaran
+df["Bulan Aktif"] = bulan_aktif
+df["Bulan Pembayaran"] = bulan_pembayaran
+df["Rata-rata Pembayaran"] = rata_rata_pembayaran
+df["Kepatuhan (%)"] = kepatuhan_persen
+df["Klasifikasi Kepatuhan"] = klasifikasi_kepatuhan
 
     return df, payment_cols
 
