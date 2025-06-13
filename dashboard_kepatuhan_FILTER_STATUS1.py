@@ -93,51 +93,80 @@ if uploaded_file:
         st.success("✅ Data berhasil diproses dan difilter!")
         st.dataframe(df[['Nama OP', 'UPPPD', 'STATUS', 'TMT', 'Bulan Aktif', 'Bulan Bayar', 'Total Pembayaran', 'Kepatuhan (%)', 'KLASIFIKASI']].head(50), use_container_width=True)
 
-        output = BytesIO()
-        df_output.to_excel(output, index=False)
-        st.download_button("⬇️ Download Hasil Excel", data=output.getvalue(), file_name="hasil_dashboard.xlsx")
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
 
-        st.subheader("Pie Chart Kepatuhan WP")
-        pie_data = df_output["Klasifikasi Kepatuhan"].value_counts().reset_index()
-        pie_data.columns = ["Klasifikasi", "Jumlah"]
-        fig_pie = px.pie(
-            pie_data,
-            names="Klasifikasi",
-            values="Jumlah",
-            title="Distribusi Kepatuhan WP",
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
+# Ubah Total Pembayaran kembali ke float untuk grafik
+df['Total Pembayaran (float)'] = df['Total Pembayaran'].replace(',', '', regex=True).astype(float)
 
-        st.subheader("📈 Tren Pembayaran Pajak per Bulan")
-        if payment_cols:
-            bulanan = df_output[payment_cols].sum().reset_index()
-            bulanan.columns = ["Bulan", "Total Pembayaran"]
-            bulanan["Bulan"] = pd.to_datetime(bulanan["Bulan"])
-            bulanan = bulanan.sort_values("Bulan")
+# ===============================
+# 📊 PIE CHART: Klasifikasi Kepatuhan
+# ===============================
+st.subheader("📘 Distribusi Klasifikasi Kepatuhan WP")
 
-            fig_line = px.line(
-                bulanan,
-                x="Bulan",
-                y="Total Pembayaran",
-                title="Total Pembayaran Pajak per Bulan",
-                markers=True,
-                line_shape="spline",
-                color_discrete_sequence=["#FFB6C1"]
-            )
-            st.plotly_chart(fig_line, use_container_width=True)
+pie_data = df['KLASIFIKASI'].value_counts().reset_index()
+pie_data.columns = ['Klasifikasi', 'Jumlah']
 
-            st.subheader("🏅 Top 5 Objek Pajak Berdasarkan Total Pembayaran (Tabel Lengkap)")
-            
-            # Ambil kolom yang dibutuhkan
-            top_wp_detail = (
-                df_output[["Nama Op", "Total Pembayaran", "Nm Unit", "KLASIFIKASI"]]
-                .groupby(["Nama Op", "Nm Unit", "KLASIFIKASI"], as_index=False)
-                .sum()
-                .sort_values("Total Pembayaran", ascending=False)
-                .head(5)
-            )
-            
-            # Tampilkan sebagai tabel
-            st.dataframe(top_wp_detail.style.format({"Total Pembayaran": "Rp{:,.0f}"}), use_container_width=True)
+fig_pie = px.pie(
+    pie_data,
+    names='Klasifikasi',
+    values='Jumlah',
+    title='Proporsi Wajib Pajak per Klasifikasi Kepatuhan',
+    color_discrete_sequence=px.colors.qualitative.Pastel
+)
+st.plotly_chart(fig_pie, use_container_width=True)
 
+# ===============================
+# 📈 LINE CHART: Tren Pembayaran Bulanan
+# ===============================
+st.subheader(f"📈 Tren Pembayaran Jan–Des {tahun_pilihan}")
+
+# Ambil hanya kolom bulan
+bulan_label = {
+    'jan': 'Jan', 'feb': 'Feb', 'mar': 'Mar', 'apr': 'Apr',
+    'mei': 'Mei', 'jun': 'Jun', 'jul': 'Jul', 'agu': 'Agu',
+    'sep': 'Sep', 'okt': 'Okt', 'nov': 'Nov', 'des': 'Des'
+}
+bulanan = df[kolom_bulan].copy()
+bulanan.columns = [bulan_label.get(col, col) for col in bulanan.columns]
+
+trends = bulanan.sum().reset_index()
+trends.columns = ['Bulan', 'Total Pembayaran']
+
+fig_line = px.line(
+    trends,
+    x='Bulan',
+    y='Total Pembayaran',
+    markers=True,
+    title="Total Pembayaran per Bulan"
+)
+st.plotly_chart(fig_line, use_container_width=True)
+
+# ===============================
+# 🏆 TOP 5 OP dengan Pembayaran Tertinggi
+# ===============================
+st.subheader("🏆 Top 5 OP berdasarkan Total Pembayaran")
+
+top5 = df.sort_values(by='Total Pembayaran (float)', ascending=False).head(5)
+top5_show = top5[['Nama OP', 'UPPPD', 'Total Pembayaran', 'Kepatuhan (%)', 'KLASIFIKASI']]
+st.table(top5_show.reset_index(drop=True))
+
+# ===============================
+# 📊 Bar Chart Jumlah WP per Klasifikasi
+# ===============================
+st.subheader("📌 Jumlah Wajib Pajak per Kategori Kepatuhan")
+
+bar_data = df['KLASIFIKASI'].value_counts().reset_index()
+bar_data.columns = ['KLASIFIKASI', 'Jumlah WP']
+
+fig_bar = px.bar(
+    bar_data,
+    x='KLASIFIKASI',
+    y='Jumlah WP',
+    color='KLASIFIKASI',
+    title='Jumlah WP per Kategori Kepatuhan',
+    text='Jumlah WP',
+    color_discrete_sequence=px.colors.qualitative.Pastel
+)
+st.plotly_chart(fig_bar, use_container_width=True)
