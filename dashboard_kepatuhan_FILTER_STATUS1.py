@@ -32,7 +32,6 @@ def hitung_kepatuhan(df, tahun_pajak):
     rata_rata_pembayaran = total_pembayaran / bulan_pembayaran.replace(0, 1)
     kepatuhan_persen = bulan_pembayaran / bulan_aktif.replace(0, 1) * 100
 
-
 def klasifikasi(row):
     bulan_aktif = row['bulan_aktif']
     bulan_pembayaran = row['bulan_pembayaran']
@@ -48,8 +47,6 @@ def klasifikasi(row):
 
 # Terapkan ke DataFrame
 df['klasifikasi_kepatuhan'] = df.apply(klasifikasi, axis=1)
-
-
 
     df["Total Pembayaran"] = total_pembayaran
     df["Bulan Aktif"] = bulan_aktif
