@@ -76,7 +76,7 @@ if uploaded_file:
                 df_output = df_output[df_output["KLASIFIKASI"] == selected_klasifikasi]
 
             if "Status" in df_output.columns:
-                selected_status = st.multiselect("📌 Pilih Status WP", options=sorted(df_output["Status"].dropna().unique().tolist()), default=None)
+                selected_status = st.multiselect("📌 Pilih Status OP", options=sorted(df_output["Status"].dropna().unique().tolist()), default=None)
                 if selected_status:
                     df_output = df_output[df_output["Status"].isin(selected_status)]
 
@@ -117,14 +117,14 @@ if uploaded_file:
             )
             st.plotly_chart(fig_line, use_container_width=True)
 
-        st.subheader("🏅 Top 20 Wajib Pajak Berdasarkan Total Pembayaran")
+        st.subheader("🏅 Top 5 Objek Pajak Berdasarkan Total Pembayaran")
         top_wp = df_output[["Nama Op", "Total Pembayaran"]].groupby("Nama Op").sum().reset_index()
-        top_wp = top_wp.sort_values("Total Pembayaran", ascending=False).head(20)
+        top_wp = top_wp.sort_values("Total Pembayaran", ascending=False).head(5)
         fig_bar = px.bar(
             top_wp,
             x="Nama Op",
             y="Total Pembayaran",
-            title="Top 20 WP Berdasarkan Total Pembayaran",
+            title="Top 5 WP Berdasarkan Total Pembayaran",
             color_discrete_sequence=["#A0CED9"]
         )
         st.plotly_chart(fig_bar, use_container_width=True)
