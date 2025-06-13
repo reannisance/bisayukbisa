@@ -81,7 +81,7 @@ if uploaded_file:
     df_input = pd.read_excel(xls, sheet_name=selected_sheet)
     df_input = normalisasi_kolom(df_input)
 
-    required_cols = ["TMT", "STATUS", "Nm Unit"]
+    required_cols = ["TMT", "STATUS", "KLASIFIKASI", "Nm Unit"]
     missing_cols = [col for col in required_cols if col not in df_input.columns]
 
     if missing_cols:
