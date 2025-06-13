@@ -54,8 +54,7 @@ df["Bulan Pembayaran"] = bulan_pembayaran
 df["Rata-rata Pembayaran"] = rata_rata_pembayaran
 df["Kepatuhan (%)"] = kepatuhan_persen
 df["Klasifikasi Kepatuhan"] = klasifikasi_kepatuhan
-
-return df, payment_cols
+    return df, payment_cols
 
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
